@@ -1,0 +1,96 @@
+---
+title: "SOK-1005-assignment-2"
+author: “Marte J. Skadssem Haetta Eikelmann”
+format: pdf
+echo: true
+output: true
+---
+
+### Prepare to answer the assignment:
+
+```{r}
+#removing all previous data to start on a clean sheet.
+
+rm(list=ls())
+
+
+#loading necessary packages
+
+library(tidyverse)
+library(rvest)   
+library(janitor)
+library(lubridate)
+library(readr)
+```
+
+### Task 1
+
+```{r}
+#scraping the table from the URL
+
+url <- "https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132"
+
+table <- url %>%
+  read_html() %>% 
+  html_nodes("table") %>% 
+  html_table() 
+head(table[[1]])
+```
+
+```{r}
+#naming the first table car_test
+
+car_test <- table[[1]]
+```
+
+```{r}
+car_test <- car_test %>%
+  row_to_names(1, remove_rows_above = FALSE) %>% #set the first row to columnnames
+  rename("modell" = "Modell (temp. varierte fra 0° til -10°)","wltp_tall" = "WLTP-tall","avvik" = "Avvik","stopp" = "STOPP") #renaming the columns
+```
+
+```{r}
+#extracting numbers from each string
+
+car_test <- car_test %>%
+  mutate(stopp = parse_number(stopp), wltp_tall = parse_number(wltp_tall), avvik = parse_number(avvik)) %>%
+  mutate(avvik = avvik/100)
+```
+
+```{r}
+#plotting the data
+
+car_test %>%
+  ggplot(aes(x=wltp_tall,y=stopp, label=modell)) +
+  geom_point(color="blue") +
+  geom_abline(intercept = 0, slope = 1, size = 0.3, color="red") + #making a 45 degree line
+  geom_text(hjust=0.5, vjust=0.5, check_overlap = TRUE) +
+  xlim(300,650) +
+  ylim(250,650) +
+  labs(title="Sammenheng mellom WLTP-tall og antall faktisk kjørte kilometer", x="WLTP-tall", y="Antall kilometer før stopp") +
+  theme_classic()
+```
+
+### Task 2
+
+```{r}
+lm(stopp ~ wltp_tall, data = car_test)
+
+```
+
+*The lm() function is used to fit a linear model based on the dataframe we put into it. The two values that appeare when I run the code represent the linear model's intercept with the y-axis and the rate of increase. Both values are constants, which means that the values can be multiplied with other values in an expression, but do not change itself.*
+
+```{r}
+#plotting the data
+
+car_test %>%
+  ggplot(aes(x=wltp_tall,y=stopp, label=modell)) +
+  geom_point(color="blue") +
+  geom_abline(intercept = 0, slope = 1, size = 0.3, color="red") + #making a 45 degree line
+  geom_smooth(method = lm) + #plotting the fitted linear model
+  geom_text(hjust=0.5, vjust=0.5, check_overlap = TRUE) +
+  xlim(300,650) +
+  ylim(250,650) +
+  labs(title="Sammenheng mellom WLTP-tall og antall faktisk kjørte kilometer", x="WLTP-tall", y="Antall kilometer før stopp") +
+  theme_classic()
+```
